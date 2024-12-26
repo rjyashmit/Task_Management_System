@@ -1,21 +1,21 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
-import env from 'dotenv';
+import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { authMiddleware } from './auth.js'; // Named import
 
-env.config();
+dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log("Connected to MongoDB"+ process.env.MONGODB_URI))
+    .then(() => console.log("Connected ßto MongoDB"+ process.env.MONGODB_URI))
     .catch(err => console.error("Could not connect to MongoDB", err));
 
 // User Schema and Model
@@ -60,6 +60,8 @@ const Task = mongoose.model('Task', TaskSchema);
 app.post('/register', async (req, res) => {
     
     const { username, email, password } = req.body;
+    console.log(username, email, password)
+    console.log(process.env.JWT_TOKEN)
 
     try {
         // Check if the user already exists
@@ -83,6 +85,8 @@ app.post('/register', async (req, res) => {
         });
         console.log("new User created");
         await user.save();
+
+        console.log(user)
 
         // Create and send JWT
         const token = jwt.sign({ userId: user._id }, process.env.JWT_TOKEN, { expiresIn: '1h' });
@@ -122,8 +126,13 @@ console.log("Enter routes")
 
 // Get all tasks for authenticated user
 app.get('/tasks', async (req, res) => {
+    console.log("getting tasks")
+    const token = req.header('x-auth-token');
+    const decoded = jwt.verify(token, process.env.JWT_TOKEN);
+    console.log(decoded)
+
     try {
-        const tasks = await Task.find({ userId: req.user.userId });
+        const tasks = await Task.find({ userId: decoded.userId });
         res.json(tasks);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
